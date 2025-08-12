@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Seat Logging</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            /* allow scroll on small screens */
+            margin-right: 10px;
+            /* small margin on right */
+        }
+
+        table {
+            border-collapse: collapse;
+            font-family: "Courier New", monospace;
+            width: 100%;
+            /* take all available width */
+        }
+
+        td {
+            height: 35px;
+            /* perfect square cells */
+            border: 1px solid #aaa;
+            text-align: center;
+            vertical-align: middle;
+            cursor: pointer;
+            background-color: white;
+            transition: background-color 0.2s, transform 0.1s;
+            user-select: none;
+            font-size: clamp(12px, 1.5vw, 18px);
+            /* responsive font size */
+        }
+
+        td:active {
+            transform: scale(0.95);
+        }
+
+        td.selected {
+            background-color: lightblue !important;
+        }
+
+        td.logged {
+            background-color: yellow;
+        }
+
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            background-color: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+            margin-top: 15px;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 15px;
+            font-size: 18px;
+        }
+
+        .radio-group input {
+            transform: scale(1.5);
+            margin-right: 5px;
+        }
+
+        button {
+            padding: 12px 20px;
+            font-size: 18px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        button:active {
+            transform: scale(0.97);
+        }
+
+        #logButton {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        #logButton:hover {
+            background-color: #45a049;
+        }
+
+        #downloadButton {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        #downloadButton:hover {
+            background-color: #1e88e5;
+        }
+
+        #clearButton {
+            background-color: #f44336;
+            color: white;
+        }
+
+        #clearButton:hover {
+            background-color: #e53935;
+        }
+
+        @media (max-width: 600px) {
+            td {
+                font-size: 14px;
+            }
+
+            button {
+                flex: 1;
+                font-size: 16px;
+            }
+
+            .radio-group {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Seat Logging</h1>
+
+    <div class="table-container">
+        <table id="seatMap"></table>
+    </div>
+
+    <div id="controls">
+        <div class="radio-group">
+            <label><input type="radio" name="personType" value="Adult" checked> Adult</label>
+            <label><input type="radio" name="personType" value="Child"> Child</label>
+        </div>
+        <button id="logButton">Log Seat</button>
+        <button id="downloadButton">Download Log</button>
+        <button id="clearButton">Clear All Data</button>
+    </div>
+
+    <script>
+        const rows = 12;
+        const cols = 25;
+        const seatMap = document.getElementById('seatMap');
+        let logData = JSON.parse(localStorage.getItem('seatLogs') || '[]');
+        let loggedSeats = new Set(JSON.parse(localStorage.getItem('loggedSeats') || '[]'));
+        let selectedSeat = null;
+
+        function formatColNumber(num) {
+            return num.toString().padStart(2, '0');
+        }
+
+        function rowLetter(index) {
+            return String.fromCharCode(65 + index);
+        }
+
+        function buildSeatMap() {
+            seatMap.innerHTML = '';
+            for (let r = 0; r < rows; r++) {
+                const row = document.createElement('tr');
+                for (let c = 0; c < cols; c++) {
+                    const cell = document.createElement('td');
+                    const seatId = `${rowLetter(r)}${formatColNumber(c + 1)}`;
+                    cell.textContent = seatId;
+                    cell.dataset.seatId = seatId;
+                    if (loggedSeats.has(seatId)) {
+                        cell.classList.add('logged');
+                    }
+                    cell.addEventListener('click', () => selectSeat(cell));
+                    row.appendChild(cell);
+                }
+                seatMap.appendChild(row);
+            }
+        }
+
+        function selectSeat(cell) {
+            if (selectedSeat === cell) {
+                cell.classList.remove('selected');
+                selectedSeat = null;
+            } else {
+                document.querySelectorAll('#seatMap td').forEach(td => td.classList.remove('selected'));
+                selectedSeat = cell;
+                cell.classList.add('selected');
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('seatLogs', JSON.stringify(logData));
+            localStorage.setItem('loggedSeats', JSON.stringify([...loggedSeats]));
+        }
+
+        document.getElementById('logButton').addEventListener('click', () => {
+            if (!selectedSeat) return;
+            const personType = document.querySelector('input[name="personType"]:checked').value;
+            const timestamp = new Date().toISOString();
+            const seatId = selectedSeat.dataset.seatId;
+
+            logData.push({ timestamp, seat: seatId, type: personType });
+            loggedSeats.add(seatId);
+            saveData();
+
+            selectedSeat.classList.remove('selected');
+            selectedSeat.classList.add('logged');
+            selectedSeat = null;
+        });
+
+        document.getElementById('downloadButton').addEventListener('click', () => {
+            const csv = "Timestamp,Seat,Type\n" +
+                logData.map(entry => `${entry.timestamp},${entry.seat},${entry.type}`).join("\n");
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'seat_log.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('clearButton').addEventListener('click', () => {
+            const password = prompt("Enter password to clear all data:");
+            if (password === "ichbinmirsicher") {
+                localStorage.removeItem('seatLogs');
+                localStorage.removeItem('loggedSeats');
+                logData = [];
+                loggedSeats = new Set();
+                buildSeatMap();
+            }
+        });
+
+        buildSeatMap();
+    </script>
+</body>
+
+</html>
