@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Seat Position Logger with Click & Hover Highlight</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f5f5f5;
+  }
+  h1 {
+    margin-bottom: 15px;
+  }
+  #seatArea {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    aspect-ratio: 2 / 1;
+    background-color: white;
+    border: 2px solid #333;
+    margin-bottom: 20px;
+    cursor: crosshair;
+    border-radius: 6px;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+    background-image:
+      linear-gradient(to right, #ccc 1px, transparent 1px),
+      linear-gradient(to bottom, #ccc 1px, transparent 1px);
+    background-size: calc(100% / 25) calc(100% / 12);
+  }
+  .dot {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background-color: black;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  .dot-last {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    background-color: rgba(255, 0, 0, 0.5);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    box-shadow: 0 0 8px rgba(255, 0, 0, 0.7);
+  }
+  /* Hover/click highlight dot */
+  .dot-highlight {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    background-color: rgba(0, 0, 255, 0.4);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    box-shadow: 0 0 10px rgba(0, 0, 255, 0.6);
+    display: none;
+  }
+  #logList {
+    list-style: none;
+    padding: 0;
+  }
+  #logList li {
+    background: white;
+    margin-bottom: 8px;
+    padding: 10px;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: background-color 0.3s ease;
+  }
+  #logList li.highlighted {
+    background-color: rgba(0, 0, 255, 0.15);
+  }
+  .removeBtn {
+    background: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+  .removeBtn:hover {
+    background: #e53935;
+  }
+</style>
+</head>
+<body>
+
+<h1>Seat Position Logger with Click & Hover Highlight</h1>
+<div id="seatArea"></div>
+<ul id="logList"></ul>
+
+<script>
+  const seatArea = document.getElementById('seatArea');
+  const logList = document.getElementById('logList');
+
+  let logData = JSON.parse(localStorage.getItem('seatLogs') || '[]');
+  let highlightedIndex = null; // track clicked selected item
+
+  // Create highlight dot once
+  const highlightDot = document.createElement('div');
+  highlightDot.className = 'dot-highlight';
+  seatArea.appendChild(highlightDot);
+
+  function saveData() {
+    localStorage.setItem('seatLogs', JSON.stringify(logData));
+  }
+
+  function renderDots() {
+    seatArea.querySelectorAll('.dot, .dot-last').forEach(dot => dot.remove());
+
+    logData.forEach((entry) => {
+      const dot = document.createElement('div');
+      dot.classList.add('dot');
+      dot.style.left = (entry.x * 100) + '%';
+      dot.style.top = (entry.y * 100) + '%';
+      seatArea.appendChild(dot);
+    });
+
+    if (logData.length > 0) {
+      const last = logData[logData.length - 1];
+      const lastDot = document.createElement('div');
+      lastDot.classList.add('dot-last');
+      lastDot.style.left = (last.x * 100) + '%';
+      lastDot.style.top = (last.y * 100) + '%';
+      seatArea.appendChild(lastDot);
+    }
+  }
+
+  function clearHighlight() {
+    highlightedIndex = null;
+    highlightDot.style.display = 'none';
+    document.querySelectorAll('#logList li.highlighted').forEach(li => li.classList.remove('highlighted'));
+  }
+
+  function setHighlight(index) {
+    highlightedIndex = index;
+    const entry = logData[index];
+    if (!entry) return;
+
+    highlightDot.style.left = (entry.x * 100) + '%';
+    highlightDot.style.top = (entry.y * 100) + '%';
+    highlightDot.style.display = 'block';
+
+    document.querySelectorAll('#logList li').forEach((li, i) => {
+      li.classList.toggle('highlighted', i === (logData.length - 1 - index));
+    });
+  }
+
+  function renderLog() {
+    logList.innerHTML = '';
+    [...logData].reverse().forEach((entry, i) => {
+      const idx = logData.length - 1 - i;
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <span>
+          <strong>X:</strong> ${entry.x.toFixed(3)},
+          <strong>Y:</strong> ${entry.y.toFixed(3)},
+          <em>${entry.timestamp}</em>
+        </span>
+        <button class="removeBtn" data-index="${idx}">Remove</button>
+      `;
+
+      // Hover dot on hover
+      li.addEventListener('mouseenter', () => {
+        if (highlightedIndex === null) { // only show if not clicked selection
+          highlightDot.style.left = (entry.x * 100) + '%';
+          highlightDot.style.top = (entry.y * 100) + '%';
+          highlightDot.style.display = 'block';
+          li.classList.add('highlighted');
+        }
+      });
+      li.addEventListener('mouseleave', () => {
+        if (highlightedIndex === null) {
+          highlightDot.style.display = 'none';
+          li.classList.remove('highlighted');
+        }
+      });
+
+      // Click to toggle highlight
+      li.addEventListener('click', () => {
+        if (highlightedIndex === idx) {
+          clearHighlight();
+        } else {
+          setHighlight(idx);
+        }
+      });
+
+      logList.appendChild(li);
+    });
+
+    document.querySelectorAll('.removeBtn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation(); // prevent li click
+        const idx = parseInt(e.target.dataset.index, 10);
+        if (highlightedIndex === idx) {
+          clearHighlight();
+        }
+        logData.splice(idx, 1);
+        saveData();
+        renderLog();
+        renderDots();
+      });
+    });
+  }
+
+  seatArea.addEventListener('click', e => {
+    const rect = seatArea.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    const timestamp = new Date().toISOString();
+
+    logData.push({ x, y, timestamp });
+    saveData();
+    renderLog();
+    renderDots();
+    clearHighlight(); // clear highlight on new click
+  });
+
+  renderLog();
+  renderDots();
+</script>
+
+</body>
+</html>
