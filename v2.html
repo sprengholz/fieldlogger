@@ -62,6 +62,17 @@
   #controls {
     margin-bottom: 10px;
   }
+
+  button {
+    background: #fff;
+    color: #888;
+    border: 1px solid #888;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin-right: 8px;
+    cursor: pointer;
+    font-size: 14px;
+  }
   #controls button {
     background: #555;
     color: white;
@@ -103,8 +114,11 @@
 </head>
 <body>
 
-<h3 style="width: auto; max-width: 800px; text-align: center;">DRINKING EVENT LOGGER</h3>
-<div style="width: auto; max-width: 800px; text-align: center;">STAGE</div>
+<div style="width: auto; max-width: 800px;">
+    <span style="border: 1px solid black; padding: 7px 12px; border-radius: 4px; margin-right: 20px; color: white; background-color: black; font-weight: bold;">DRINKING EVENT LOGGER </span>
+    <button id="downloadPageBtn" class="button">Install for offline use</button>
+</div>
+<div style="width: auto; max-width: 800px; text-align: center; margin-top: 15px; margin-bottom: 5px;">STAGE</div>
 <div id="seatArea"></div>
 
 <div id="controls">
@@ -270,6 +284,24 @@
     a.download = 'seat_log.csv';
     a.click();
     URL.revokeObjectURL(url);
+  });
+
+  const downloadPageBtn = document.getElementById('downloadPageBtn');
+  downloadPageBtn.addEventListener('click', () => {
+    fetch(window.location.href)
+      .then(response => response.text())
+      .then(html => {
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'seat_logger.html';
+        a.click();
+        URL.revokeObjectURL(url);
+      })
+      .catch(() => {
+        alert('Unable to fetch page content. This may not work if you are running locally without a server.');
+      });
   });
 
   renderLog();
