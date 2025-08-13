@@ -63,7 +63,7 @@
     margin-bottom: 10px;
   }
   #controls button {
-    background: #1976d2;
+    background: #555;
     color: white;
     border: none;
     border-radius: 4px;
@@ -73,7 +73,7 @@
     font-size: 14px;
   }
   #controls button:hover {
-    background: #1565c0;
+    background: #333;
   }
   #controls button.danger {
     background: #f44336;
@@ -181,9 +181,8 @@
       const li = document.createElement('li');
       li.innerHTML = `
         <span>
-          <strong>X:</strong> ${entry.x.toFixed(3)},
-          <strong>Y:</strong> ${entry.y.toFixed(3)},
-          <em>${entry.timestamp}</em>
+          <b>${idx}</b>
+          ${entry.timestamp}
         </span>
       `;
 
