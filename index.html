@@ -1,246 +1,312 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <title>Seat Logging</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f5f5f5;
-            color: #333;
-        }
+<meta charset="UTF-8" />
+<title>Event Logger</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f5f5f5;
+  }
+  h1 {
+    margin-bottom: 15px;
+  }
+  #seatArea {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    aspect-ratio: 2 / 1;
+    background-color: white;
+    border: 2px solid #333;
+    margin-bottom: 20px;
+    cursor: crosshair;
+    border-radius: 6px;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+    background-image:
+      linear-gradient(to right, #ccc 1px, transparent 1px),
+      linear-gradient(to bottom, #ccc 1px, transparent 1px);
+    background-size: calc(100% / 25) calc(100% / 12);
+  }
+  .dot {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background-color: black;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    opacity: 0.33;
+  }
+  .dot-last {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    background-color: rgba(255, 0, 0, 0.5);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    box-shadow: 0 0 8px rgba(255, 0, 0, 0.7);
+  }
+  .dot-highlight {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    background-color: rgba(0, 0, 255, 0.4);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    box-shadow: 0 0 10px rgba(0, 0, 255, 0.6);
+    display: none;
+  }
+  #controls {
+    margin-bottom: 10px;
+  }
 
-        .table-container {
-            overflow-x: auto;
-            /* allow scroll on small screens */
-            margin-right: 10px;
-            /* small margin on right */
-        }
-
-        table {
-            border-collapse: collapse;
-            font-family: "Courier New", monospace;
-            width: 100%;
-            /* take all available width */
-        }
-
-        td {
-            height: 35px;
-            /* perfect square cells */
-            border: 1px solid #aaa;
-            text-align: center;
-            vertical-align: middle;
-            cursor: pointer;
-            background-color: white;
-            transition: background-color 0.2s, transform 0.1s;
-            user-select: none;
-            font-size: clamp(12px, 1.5vw, 18px);
-            /* responsive font size */
-        }
-
-        td:active {
-            transform: scale(0.95);
-        }
-
-        td.selected {
-            background-color: lightblue !important;
-        }
-
-        td.logged {
-            background-color: yellow;
-        }
-
-        #controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            align-items: center;
-            background-color: white;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
-            margin-top: 15px;
-        }
-
-        .radio-group {
-            display: flex;
-            gap: 15px;
-            font-size: 18px;
-        }
-
-        .radio-group input {
-            transform: scale(1.5);
-            margin-right: 5px;
-        }
-
-        button {
-            padding: 12px 20px;
-            font-size: 18px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
-        }
-
-        button:active {
-            transform: scale(0.97);
-        }
-
-        #logButton {
-            background-color: #4CAF50;
-            color: white;
-        }
-
-        #logButton:hover {
-            background-color: #45a049;
-        }
-
-        #downloadButton {
-            background-color: #2196F3;
-            color: white;
-        }
-
-        #downloadButton:hover {
-            background-color: #1e88e5;
-        }
-
-        #clearButton {
-            background-color: #f44336;
-            color: white;
-        }
-
-        #clearButton:hover {
-            background-color: #e53935;
-        }
-
-        @media (max-width: 600px) {
-            td {
-                font-size: 14px;
-            }
-
-            button {
-                flex: 1;
-                font-size: 16px;
-            }
-
-            .radio-group {
-                font-size: 16px;
-            }
-        }
-    </style>
+  button {
+    background: #fff;
+    color: #888;
+    border: 1px solid #888;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin-right: 8px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  #controls button {
+    background: #555;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin-right: 8px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  #controls button:hover {
+    background: #333;
+  }
+  #controls button.danger {
+    background: #f44336;
+  }
+  #controls button.danger:hover {
+    background: #d32f2f;
+  }
+  #logList {
+    list-style: none;
+    padding: 0;
+    max-width: 800px;
+  }
+  #logList li {
+    background: white;
+    margin-bottom: 8px;
+    padding: 10px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: background-color 0.3s ease;
+  }
+  #logList li.highlighted {
+    background-color: rgba(0, 0, 255, 0.15);
+  }
+</style>
 </head>
-
 <body>
-    <h1>Seat Logging</h1>
 
-    <div class="table-container">
-        <table id="seatMap"></table>
-    </div>
+<div style="width: auto; max-width: 800px;">
+    <span style="border: 1px solid black; padding: 7px 12px; border-radius: 4px; margin-right: 20px; color: white; background-color: black; font-weight: bold;">DRINKING EVENT LOGGER </span>
+    <button id="downloadPageBtn" class="button">Install for Offline Use</button>
+</div>
+<div style="width: auto; max-width: 800px; text-align: center; margin-top: 15px; margin-bottom: 5px;">STAGE</div>
+<div id="seatArea"></div>
 
-    <div id="controls">
-        <div class="radio-group">
-            <label><input type="radio" name="personType" value="Adult" checked> Adult</label>
-            <label><input type="radio" name="personType" value="Child"> Child</label>
-        </div>
-        <button id="logButton">Log Seat</button>
-        <button id="downloadButton">Download Log</button>
-        <button id="clearButton">Clear All Data</button>
-    </div>
+<div id="controls">
+  <button id="removeSelectedBtn" class="danger">Remove Selected</button>
+  <button id="removeAllBtn" class="danger">Remove All</button>
+  <button id="exportBtn">Export CSV</button>
+</div>
 
-    <script>
-        const rows = 12;
-        const cols = 25;
-        const seatMap = document.getElementById('seatMap');
-        let logData = JSON.parse(localStorage.getItem('seatLogs') || '[]');
-        let loggedSeats = new Set(JSON.parse(localStorage.getItem('loggedSeats') || '[]'));
-        let selectedSeat = null;
+<ul id="logList"></ul>
 
-        function formatColNumber(num) {
-            return num.toString().padStart(2, '0');
+<script>
+  const seatArea = document.getElementById('seatArea');
+  const logList = document.getElementById('logList');
+  const removeSelectedBtn = document.getElementById('removeSelectedBtn');
+  const removeAllBtn = document.getElementById('removeAllBtn');
+  const exportBtn = document.getElementById('exportBtn');
+
+  let logData = JSON.parse(localStorage.getItem('seatLogs') || '[]');
+  let highlightedIndex = null;
+
+  const highlightDot = document.createElement('div');
+  highlightDot.className = 'dot-highlight';
+  seatArea.appendChild(highlightDot);
+
+  function saveData() {
+    localStorage.setItem('seatLogs', JSON.stringify(logData));
+  }
+
+  function renderDots() {
+    seatArea.querySelectorAll('.dot, .dot-last').forEach(dot => dot.remove());
+
+    logData.forEach((entry) => {
+      const dot = document.createElement('div');
+      dot.classList.add('dot');
+      dot.style.left = (entry.x * 100) + '%';
+      dot.style.top = (entry.y * 100) + '%';
+      seatArea.appendChild(dot);
+    });
+
+    if (logData.length > 0) {
+      const last = logData[logData.length - 1];
+      const lastDot = document.createElement('div');
+      lastDot.classList.add('dot-last');
+      lastDot.style.left = (last.x * 100) + '%';
+      lastDot.style.top = (last.y * 100) + '%';
+      seatArea.appendChild(lastDot);
+    }
+  }
+
+  function clearHighlight() {
+    highlightedIndex = null;
+    highlightDot.style.display = 'none';
+    document.querySelectorAll('#logList li.highlighted').forEach(li => li.classList.remove('highlighted'));
+  }
+
+  function setHighlight(index) {
+    highlightedIndex = index;
+    const entry = logData[index];
+    if (!entry) return;
+
+    highlightDot.style.left = (entry.x * 100) + '%';
+    highlightDot.style.top = (entry.y * 100) + '%';
+    highlightDot.style.display = 'block';
+
+    document.querySelectorAll('#logList li').forEach((li, i) => {
+      li.classList.toggle('highlighted', i === (logData.length - 1 - index));
+    });
+  }
+
+  function renderLog() {
+    logList.innerHTML = '';
+    [...logData].reverse().forEach((entry, i) => {
+      const idx = logData.length - 1 - i;
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <span>
+          <b>${idx+1}</b>
+          ${entry.timestamp}
+        </span>
+      `;
+
+      li.addEventListener('mouseenter', () => {
+        if (highlightedIndex === null) {
+          highlightDot.style.left = (entry.x * 100) + '%';
+          highlightDot.style.top = (entry.y * 100) + '%';
+          highlightDot.style.display = 'block';
+          li.classList.add('highlighted');
         }
-
-        function rowLetter(index) {
-            return String.fromCharCode(65 + index);
+      });
+      li.addEventListener('mouseleave', () => {
+        if (highlightedIndex === null) {
+          highlightDot.style.display = 'none';
+          li.classList.remove('highlighted');
         }
+      });
 
-        function buildSeatMap() {
-            seatMap.innerHTML = '';
-            for (let r = 0; r < rows; r++) {
-                const row = document.createElement('tr');
-                for (let c = 0; c < cols; c++) {
-                    const cell = document.createElement('td');
-                    const seatId = `${rowLetter(r)}${formatColNumber(c + 1)}`;
-                    cell.textContent = seatId;
-                    cell.dataset.seatId = seatId;
-                    if (loggedSeats.has(seatId)) {
-                        cell.classList.add('logged');
-                    }
-                    cell.addEventListener('click', () => selectSeat(cell));
-                    row.appendChild(cell);
-                }
-                seatMap.appendChild(row);
-            }
+      li.addEventListener('click', () => {
+        if (highlightedIndex === idx) {
+          clearHighlight();
+        } else {
+          setHighlight(idx);
         }
+      });
 
-        function selectSeat(cell) {
-            if (selectedSeat === cell) {
-                cell.classList.remove('selected');
-                selectedSeat = null;
-            } else {
-                document.querySelectorAll('#seatMap td').forEach(td => td.classList.remove('selected'));
-                selectedSeat = cell;
-                cell.classList.add('selected');
-            }
-        }
+      logList.appendChild(li);
+    });
+  }
 
-        function saveData() {
-            localStorage.setItem('seatLogs', JSON.stringify(logData));
-            localStorage.setItem('loggedSeats', JSON.stringify([...loggedSeats]));
-        }
+  seatArea.addEventListener('click', e => {
+    const rect = seatArea.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    const timestamp = new Date().toISOString();
 
-        document.getElementById('logButton').addEventListener('click', () => {
-            if (!selectedSeat) return;
-            const personType = document.querySelector('input[name="personType"]:checked').value;
-            const timestamp = new Date().toISOString();
-            const seatId = selectedSeat.dataset.seatId;
+    logData.push({ x, y, timestamp });
+    saveData();
+    renderLog();
+    renderDots();
+    clearHighlight();
+  });
 
-            logData.push({ timestamp, seat: seatId, type: personType });
-            loggedSeats.add(seatId);
-            saveData();
+  removeSelectedBtn.addEventListener('click', () => {
+    if (highlightedIndex === null) {
+      alert('No item selected to remove.');
+      return;
+    }
+    if (confirm('Remove the selected item?')) {
+      logData.splice(highlightedIndex, 1);
+      saveData();
+      renderLog();
+      renderDots();
+      clearHighlight();
+    }
+  });
 
-            selectedSeat.classList.remove('selected');
-            selectedSeat.classList.add('logged');
-            selectedSeat = null;
-        });
+  removeAllBtn.addEventListener('click', () => {
+    const password = prompt('Enter password to remove all:');
+    if (password === '1234') {
+      logData = [];
+      saveData();
+      renderLog();
+      renderDots();
+      clearHighlight();
+    } else if (password !== null) {
+      alert('Incorrect password.');
+    }
+  });
 
-        document.getElementById('downloadButton').addEventListener('click', () => {
-            const csv = "Timestamp,Seat,Type\n" +
-                logData.map(entry => `${entry.timestamp},${entry.seat},${entry.type}`).join("\n");
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
+  exportBtn.addEventListener('click', () => {
+    if (logData.length === 0) {
+      alert('No data to export.');
+      return;
+    }
+    const csvRows = [['X', 'Y', 'Timestamp']];
+    logData.forEach(entry => {
+      csvRows.push([entry.x.toFixed(3), entry.y.toFixed(3), entry.timestamp]);
+    });
+    const csvContent = csvRows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'seat_log.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
 
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'seat_log.csv';
-            a.click();
-            URL.revokeObjectURL(url);
-        });
+  const downloadPageBtn = document.getElementById('downloadPageBtn');
+  downloadPageBtn.addEventListener('click', () => {
+    fetch(window.location.href)
+      .then(response => response.text())
+      .then(html => {
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'seat_logger.html';
+        a.click();
+        URL.revokeObjectURL(url);
+      })
+      .catch(() => {
+        alert('Unable to fetch page content. This may not work if you are running locally without a server.');
+      });
+  });
 
-        document.getElementById('clearButton').addEventListener('click', () => {
-            const password = prompt("Enter password to clear all data:");
-            if (password === "ichbinmirsicher") {
-                localStorage.removeItem('seatLogs');
-                localStorage.removeItem('loggedSeats');
-                logData = [];
-                loggedSeats = new Set();
-                buildSeatMap();
-            }
-        });
+  renderLog();
+  renderDots();
+</script>
 
-        buildSeatMap();
-    </script>
 </body>
-
 </html>
