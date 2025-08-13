@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Seat Position Logger with Click & Hover Highlight</title>
+<title>Event Logger</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -47,7 +47,6 @@
     pointer-events: none;
     box-shadow: 0 0 8px rgba(255, 0, 0, 0.7);
   }
-  /* Hover/click highlight dot */
   .dot-highlight {
     position: absolute;
     width: 24px;
@@ -59,9 +58,32 @@
     box-shadow: 0 0 10px rgba(0, 0, 255, 0.6);
     display: none;
   }
+  #controls {
+    margin-bottom: 10px;
+  }
+  #controls button {
+    background: #1976d2;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin-right: 8px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  #controls button:hover {
+    background: #1565c0;
+  }
+  #controls button.danger {
+    background: #f44336;
+  }
+  #controls button.danger:hover {
+    background: #d32f2f;
+  }
   #logList {
     list-style: none;
     padding: 0;
+    max-width: 800px;
   }
   #logList li {
     background: white;
@@ -69,7 +91,6 @@
     padding: 10px;
     border-radius: 6px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     transition: background-color 0.3s ease;
@@ -77,33 +98,32 @@
   #logList li.highlighted {
     background-color: rgba(0, 0, 255, 0.15);
   }
-  .removeBtn {
-    background: #f44336;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 6px 10px;
-    cursor: pointer;
-  }
-  .removeBtn:hover {
-    background: #e53935;
-  }
 </style>
 </head>
 <body>
 
-<h1>Seat Position Logger with Click & Hover Highlight</h1>
+<h3 style="width: auto; max-width: 800px; text-align: center;">DRINKING EVENT LOGGER</h3>
+<div style="width: auto; max-width: 800px; text-align: center;">STAGE</div>
 <div id="seatArea"></div>
+
+<div id="controls">
+  <button id="removeSelectedBtn" class="danger">Remove Selected</button>
+  <button id="removeAllBtn" class="danger">Remove All</button>
+  <button id="exportBtn">Export CSV</button>
+</div>
+
 <ul id="logList"></ul>
 
 <script>
   const seatArea = document.getElementById('seatArea');
   const logList = document.getElementById('logList');
+  const removeSelectedBtn = document.getElementById('removeSelectedBtn');
+  const removeAllBtn = document.getElementById('removeAllBtn');
+  const exportBtn = document.getElementById('exportBtn');
 
   let logData = JSON.parse(localStorage.getItem('seatLogs') || '[]');
-  let highlightedIndex = null; // track clicked selected item
+  let highlightedIndex = null;
 
-  // Create highlight dot once
   const highlightDot = document.createElement('div');
   highlightDot.className = 'dot-highlight';
   seatArea.appendChild(highlightDot);
@@ -164,12 +184,10 @@
           <strong>Y:</strong> ${entry.y.toFixed(3)},
           <em>${entry.timestamp}</em>
         </span>
-        <button class="removeBtn" data-index="${idx}">Remove</button>
       `;
 
-      // Hover dot on hover
       li.addEventListener('mouseenter', () => {
-        if (highlightedIndex === null) { // only show if not clicked selection
+        if (highlightedIndex === null) {
           highlightDot.style.left = (entry.x * 100) + '%';
           highlightDot.style.top = (entry.y * 100) + '%';
           highlightDot.style.display = 'block';
@@ -183,7 +201,6 @@
         }
       });
 
-      // Click to toggle highlight
       li.addEventListener('click', () => {
         if (highlightedIndex === idx) {
           clearHighlight();
@@ -193,20 +210,6 @@
       });
 
       logList.appendChild(li);
-    });
-
-    document.querySelectorAll('.removeBtn').forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.stopPropagation(); // prevent li click
-        const idx = parseInt(e.target.dataset.index, 10);
-        if (highlightedIndex === idx) {
-          clearHighlight();
-        }
-        logData.splice(idx, 1);
-        saveData();
-        renderLog();
-        renderDots();
-      });
     });
   }
 
@@ -220,7 +223,53 @@
     saveData();
     renderLog();
     renderDots();
-    clearHighlight(); // clear highlight on new click
+    clearHighlight();
+  });
+
+  removeSelectedBtn.addEventListener('click', () => {
+    if (highlightedIndex === null) {
+      alert('No item selected to remove.');
+      return;
+    }
+    if (confirm('Remove the selected item?')) {
+      logData.splice(highlightedIndex, 1);
+      saveData();
+      renderLog();
+      renderDots();
+      clearHighlight();
+    }
+  });
+
+  removeAllBtn.addEventListener('click', () => {
+    const password = prompt('Enter password to remove all:');
+    if (password === 'ichbinmirsicher') {
+      logData = [];
+      saveData();
+      renderLog();
+      renderDots();
+      clearHighlight();
+    } else if (password !== null) {
+      alert('Incorrect password.');
+    }
+  });
+
+  exportBtn.addEventListener('click', () => {
+    if (logData.length === 0) {
+      alert('No data to export.');
+      return;
+    }
+    const csvRows = [['X', 'Y', 'Timestamp']];
+    logData.forEach(entry => {
+      csvRows.push([entry.x.toFixed(3), entry.y.toFixed(3), entry.timestamp]);
+    });
+    const csvContent = csvRows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'seat_log.csv';
+    a.click();
+    URL.revokeObjectURL(url);
   });
 
   renderLog();
